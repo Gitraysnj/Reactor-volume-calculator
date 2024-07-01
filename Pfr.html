@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PFR Volume Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        label {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>PFR Volume Calculator</h1>
+        <div>
+            <label for="flowRate">Volume Flow Rate (V0):</label>
+            <input type="number" id="flowRate" placeholder="Volume Flow Rate">
+        </div>
+        <div>
+            <label for="initialConcentration">Initial Concentration (Ca0):</label>
+            <input type="number" id="initialConcentration" placeholder="Initial Concentration">
+        </div>
+        <div>
+            <label for="conversion">Conversion (X):</label>
+            <input type="number" id="conversion" placeholder="Conversion">
+        </div>
+        <div>
+            <label for="rateConstant">Rate Constant (K):</label>
+            <input type="number" id="rateConstant" placeholder="Rate Constant">
+        </div>
+        
+        <div>
+            <label for="reactionOrder">Reaction Order (n):</label>
+            <input type="number" id="reactionOrder" placeholder="Reaction Order">
+        </div>
+        <button onclick="updateGraph()">Calculate Volume</button>
+        <div id="result"></div>
+        <canvas id="myChart" width="400" height="400"></canvas>
+    </div>
+
+    <script>
+        var myChart;
+        
+        function updateGraph() {
+            var initialConcentration = parseFloat(document.getElementById('initialConcentration').value);
+            var flowRate = parseFloat(document.getElementById('flowRate').value);
+            var conversion = parseFloat(document.getElementById('conversion').value);
+            var rateConstant = parseFloat(document.getElementById('rateConstant').value);
+            var reactionOrder = parseFloat(document.getElementById('reactionOrder').value);
+
+            if (isNaN(initialConcentration) || isNaN(flowRate) || isNaN(conversion) || isNaN(rateConstant) || isNaN(reactionOrder)) {
+                alert('Please enter valid numbers for all inputs.');
+                return;
+            }
+
+            var volume = integrate(initialConcentration, flowRate, conversion, rateConstant, reactionOrder);
+
+            document.getElementById('result').innerHTML = '<p>Volume of the PFR: ' + volume.toFixed(2) + ' units</p>';
+
+            generateGraph();
+        }
+
+        function integrate(Ca0, flowRate, X, K, n) {
+            var sum = 0;
+            var deltaX = 0.001; // Delta x for numerical integration, adjust for accuracy
+            for (var x = 0; x <= X; x += deltaX) {
+                var Fa0 = Ca0 * flowRate;
+                var Ca = Ca0 * (1 - x);
+                var integralTerm = Fa0 * deltaX / (K * Math.pow(Ca, n));
+                sum += integralTerm;
+            }
+            return sum;
+        }
+
+        function generateGraph() {
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var xValues = [];
+            var yValues = [];
+
+            var Ca0 = parseFloat(document.getElementById('initialConcentration').value);
+            var flowRate = parseFloat(document.getElementById('flowRate').value);
+            var K = parseFloat(document.getElementById('rateConstant').value);
+            var n = parseFloat(document.getElementById('reactionOrder').value);
+
+            for (var x = 0; x <= 0.97; x += 0.1) { // Changed the upper limit to 0.95
+                var Ca = Ca0 * (1 - x);
+                var Fa0_ra = Ca0 * flowRate / (K * Math.pow(Ca, n));
+                xValues.push(x.toFixed(1)); // Round the value to one decimal place
+                yValues.push(Fa0_ra);
+            }
+
+            if (myChart) {
+                myChart.destroy(); // Destroy the existing chart if it exists
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: 'Levenspiel Plots',
+                        data: yValues,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'x'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Fa0 / -ra'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
